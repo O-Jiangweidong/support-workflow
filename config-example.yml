@@ -1,0 +1,15 @@
+# Service
+PORT: 8080
+# Wechat
+WECHAT_GROUP_ROBOT_WEBHOOK: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"
+ROBOT_REMINDS_MOBILE_PHONES: "xxx,xxx"
+# support
+SUPPORT_ENDPOINT: ""
+SUPPORT_USERNAME: ""
+SUPPORT_PASSWORD: ""
+# feishu
+FEISHU_ENDPOINT: ""
+FEISHU_APP_ID: ""
+FEISHU_APP_SECRET: ""
+FEISHU_TABLE_APP_TOKEN: ""
+FEISHU_TABLE_ID: ""
