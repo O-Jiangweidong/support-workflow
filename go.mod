@@ -1,11 +1,14 @@
 module support-workflow
 
-go 1.22.12
+go 1.23
+
+toolchain go1.23.9
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/larksuite/oapi-sdk-go/v3 v3.4.16
 	github.com/spf13/viper v1.20.1
+	go.etcd.io/bbolt v1.4.0
 )
 
 require (
