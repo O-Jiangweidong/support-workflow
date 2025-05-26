@@ -109,6 +109,8 @@ type MaintenanceToFeishuTask struct {
 	productName  string
 	executeTimes int
 	maxValue     int
+
+	feishuRecords map[string]Record
 }
 
 func (m *MaintenanceToFeishuTask) getMaintenances() ([]Maintenance, error) {
@@ -136,9 +138,17 @@ func (m *MaintenanceToFeishuTask) getMaintenances() ([]Maintenance, error) {
 }
 
 func (m *MaintenanceToFeishuTask) getFeishuMaintenance(companyName string) (*Maintenance, error) {
-	instance, err := GetFeishuRecord(companyName)
-	if err != nil {
-		return nil, err
+	var instance Record
+	var exists bool
+	if instance, exists = m.feishuRecords[companyName]; !exists {
+		instance = Record{
+			Fields: Fields{
+				Serial: 0,
+				CompanyFullName: []TypeTextField{
+					{Type: "", Text: companyName},
+				},
+			},
+		}
 	}
 
 	var version string
@@ -229,7 +239,50 @@ func (m *MaintenanceToFeishuTask) updateOrCreateFeishuRecord(maintenance Mainten
 	return nil
 }
 
+func (m *MaintenanceToFeishuTask) InitResources() error {
+	// 飞书表格一次性获取，API 有限额
+	pageToken := ""
+	conf := config.GetConf()
+	client := utils.NewFeishuClient()
+	for {
+		req := larkbitable.NewSearchAppTableRecordReqBuilder().
+			AppToken(conf.FeishuTableAppToken).
+			TableId(conf.FeishuTableID).
+			PageSize(500).
+			PageToken(pageToken).
+			Build()
+		resp, err := client.Client.Bitable.V1.AppTableRecord.Search(context.Background(), req)
+		if err != nil {
+			return err
+		}
+
+		if !resp.Success() {
+			return fmt.Errorf("get feishu record request failed: %s", resp.RawBody)
+		}
+		var instResp FeishuResponse
+		if err = json.Unmarshal(resp.RawBody, &instResp); err != nil {
+			return fmt.Errorf("解析表格中是否存在实施记录失败: %w", err)
+		}
+
+		pageToken = instResp.Data.PageToken
+		for _, record := range instResp.Data.Records {
+			if len(record.Fields.CompanyFullName) < 1 {
+				continue
+			}
+			m.feishuRecords[record.Fields.CompanyFullName[0].Text] = record
+		}
+		if !instResp.Data.HasMore {
+			break
+		}
+	}
+	return nil
+}
+
 func (m *MaintenanceToFeishuTask) Execute() error {
+	err := m.InitResources()
+	if err != nil {
+		return err
+	}
 	maintenances, err := m.getMaintenances()
 	if err != nil {
 		return err
@@ -269,49 +322,4 @@ func (m *MaintenanceToFeishuTask) sendMsgToWecom() {
 		}
 	}
 
-}
-
-func GetFeishuRecord(companyName string) (*Record, error) {
-	conf := config.GetConf()
-	client := utils.NewFeishuClient()
-	req := larkbitable.NewSearchAppTableRecordReqBuilder().
-		AppToken(conf.FeishuTableAppToken).
-		TableId(conf.FeishuTableID).
-		Body(larkbitable.NewSearchAppTableRecordReqBodyBuilder().
-			Filter(larkbitable.NewFilterInfoBuilder().
-				Conjunction(`and`).
-				Conditions([]*larkbitable.Condition{
-					larkbitable.NewConditionBuilder().
-						FieldName(`客户全称`).
-						Operator(`is`).
-						Value([]string{companyName}).
-						Build(),
-				}).Build()).
-			Build()).
-		Build()
-
-	resp, err := client.Client.Bitable.V1.AppTableRecord.Search(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	if !resp.Success() {
-		return nil, fmt.Errorf("exist request failed: %s", resp.RawBody)
-	}
-	var instResp FeishuResponse
-	if err = json.Unmarshal(resp.RawBody, &instResp); err != nil {
-		return nil, fmt.Errorf("解析表格中是否存在实施记录失败: %w", err)
-	}
-	if len(instResp.Data.Records) < 1 {
-		record := Record{
-			Fields: Fields{
-				Serial: 0,
-				CompanyFullName: []TypeTextField{
-					{Type: "", Text: companyName},
-				},
-			},
-		}
-		return &record, nil
-	}
-	return &instResp.Data.Records[0], nil
 }

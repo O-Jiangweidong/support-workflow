@@ -17,9 +17,14 @@ type TaskManager struct {
 }
 
 func (tm *TaskManager) StartTasks() {
-	//task1 := &MaintenanceToFeishuTask{productName: "JumpServer", maxValue: 1000}
-	task2 := &MaintenanceRecordToFeishuTask{}
-	//tm.startCronJob("企业基本数据回传飞书", task1)
+	task1 := &MaintenanceToFeishuTask{
+		productName: "JumpServer", maxValue: 1000,
+		feishuRecords: make(map[string]Record),
+	}
+	task2 := &MaintenanceRecordToFeishuTask{
+		feishuRecords: make(map[string]Record),
+	}
+	tm.startCronJob("企业基本数据回传飞书", task1)
 	tm.startCronJob("维护记录数据回传飞书", task2)
 }
 

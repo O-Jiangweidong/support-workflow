@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -74,6 +75,8 @@ type MaintenanceRecordResponse struct {
 
 type MaintenanceRecordToFeishuTask struct {
 	executeTimes int
+
+	feishuRecords map[string]Record
 }
 
 func (m *MaintenanceRecordToFeishuTask) getMaxValue() (maxValue int) {
@@ -120,9 +123,10 @@ func (m *MaintenanceRecordToFeishuTask) getMaintenanceRecords() ([]MaintenanceRe
 }
 
 func (m *MaintenanceRecordToFeishuTask) getFeishuMaintenanceRecord(companyName string) (*MaintenanceRecordTable, error) {
-	instance, err := GetFeishuRecord(companyName)
-	if err != nil {
-		return nil, err
+	var instance Record
+	var exists bool
+	if instance, exists = m.feishuRecords[companyName]; !exists {
+		return nil, fmt.Errorf("feishu company %s not found", companyName)
 	}
 
 	content := ""
@@ -188,7 +192,50 @@ func (m *MaintenanceRecordToFeishuTask) updateDataToFeishu(mr MaintenanceRecord)
 	return nil
 }
 
+func (m *MaintenanceRecordToFeishuTask) InitResources() error {
+	// 飞书表格一次性获取，API 有限额
+	pageToken := ""
+	conf := config.GetConf()
+	client := utils.NewFeishuClient()
+	for {
+		req := larkbitable.NewSearchAppTableRecordReqBuilder().
+			AppToken(conf.FeishuTableAppToken).
+			TableId(conf.FeishuTableID).
+			PageSize(500).
+			PageToken(pageToken).
+			Build()
+		resp, err := client.Client.Bitable.V1.AppTableRecord.Search(context.Background(), req)
+		if err != nil {
+			return err
+		}
+
+		if !resp.Success() {
+			return fmt.Errorf("get feishu record request failed: %s", resp.RawBody)
+		}
+		var instResp FeishuResponse
+		if err = json.Unmarshal(resp.RawBody, &instResp); err != nil {
+			return fmt.Errorf("解析表格中是否存在实施记录失败: %w", err)
+		}
+
+		pageToken = instResp.Data.PageToken
+		for _, record := range instResp.Data.Records {
+			if len(record.Fields.CompanyFullName) < 1 {
+				continue
+			}
+			m.feishuRecords[record.Fields.CompanyFullName[0].Text] = record
+		}
+		if !instResp.Data.HasMore {
+			break
+		}
+	}
+	return nil
+}
+
 func (m *MaintenanceRecordToFeishuTask) Execute() error {
+	err := m.InitResources()
+	if err != nil {
+		return err
+	}
 	maintenanceRecords, err := m.getMaintenanceRecords()
 	if err != nil {
 		return err
