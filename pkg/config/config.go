@@ -8,17 +8,18 @@ import (
 )
 
 type Config struct {
-	Port                     string `mapstructure:"PORT"`
-	WechatGroupRobotWebhook  string `mapstructure:"WECHAT_GROUP_ROBOT_WEBHOOK"`
-	RobotRemindsMobilePhones string `mapstructure:"ROBOT_REMINDS_MOBILE_PHONES"`
-	SupportEndpoint          string `mapstructure:"SUPPORT_ENDPOINT"`
-	SupportUsername          string `mapstructure:"SUPPORT_USERNAME"`
-	SupportPassword          string `mapstructure:"SUPPORT_PASSWORD"`
-	FeishuEndpoint           string `mapstructure:"FEISHU_ENDPOINT"`
-	FeishuAppID              string `mapstructure:"FEISHU_APP_ID"`
-	FeishuAppSecret          string `mapstructure:"FEISHU_APP_SECRET"`
-	FeishuTableAppToken      string `mapstructure:"FEISHU_TABLE_APP_TOKEN"`
-	FeishuTableID            string `mapstructure:"FEISHU_TABLE_ID"`
+	Port                      string `mapstructure:"PORT"`
+	WechatGroupRobotWebhook   string `mapstructure:"WECHAT_GROUP_ROBOT_WEBHOOK"`
+	WechatMessageRobotWebhook string `mapstructure:"WECHAT_MESSAGE_ROBOT_WEBHOOK"`
+	RobotRemindsMobilePhones  string `mapstructure:"ROBOT_REMINDS_MOBILE_PHONES"`
+	SupportEndpoint           string `mapstructure:"SUPPORT_ENDPOINT"`
+	SupportUsername           string `mapstructure:"SUPPORT_USERNAME"`
+	SupportPassword           string `mapstructure:"SUPPORT_PASSWORD"`
+	FeishuEndpoint            string `mapstructure:"FEISHU_ENDPOINT"`
+	FeishuAppID               string `mapstructure:"FEISHU_APP_ID"`
+	FeishuAppSecret           string `mapstructure:"FEISHU_APP_SECRET"`
+	FeishuTableAppToken       string `mapstructure:"FEISHU_TABLE_APP_TOKEN"`
+	FeishuTableID             string `mapstructure:"FEISHU_TABLE_ID"`
 }
 
 var GlobalConfig *Config
